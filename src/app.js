@@ -27,6 +27,14 @@ app.get('/user/login', (req, res) => {
   res.send('Login Successfully');
 });
 
+// wildcard-error handling matches all routes and throw any unhandled error.
+// we have written in the last because order matters in routing
+app.use('/', (err, req, res, next) => {
+  if (err) {
+    res.status(500).send('Something Went Wrong');
+  }
+});
+
 // listen this server on port no 7777
 app.listen(PORT_NO, () => {
   console.log('Server is suceessfully listening on port ', PORT_NO);
