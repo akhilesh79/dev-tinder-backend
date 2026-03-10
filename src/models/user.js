@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const validator = require('validator');
+const Validator = require('validator');
 const { Schema } = mongoose;
 
 const userSchema = new Schema(
@@ -20,7 +20,7 @@ const userSchema = new Schema(
       lowercase: true,
       trim: true,
       validate(value) {
-        if (!validator.isEmail(value)) {
+        if (!Validator.isEmail(value)) {
           throw new Error('EmailId is not valid');
         }
       },
@@ -30,7 +30,7 @@ const userSchema = new Schema(
       default:
         'https://png.pngtree.com/png-clipart/20230927/original/pngtree-man-avatar-image-for-profile-png-image_13001882.png',
       validate(value) {
-        if (!validator.isURL(value)) {
+        if (!Validator.isURL(value)) {
           throw new Error(`Profle Image is not valid`);
         }
       },
@@ -39,7 +39,7 @@ const userSchema = new Schema(
       type: String,
       required: true,
       validate(value) {
-        if (!validator.isStrongPassword(value)) {
+        if (!Validator.isStrongPassword(value)) {
           throw new Error('Password entered is not strong');
         }
       },

@@ -1,6 +1,8 @@
 const express = require('express');
 const connectDB = require('./config/database');
 const User = require('./models/user');
+const { validateSignUp } = require('./utils/validation');
+const { CustomAPIError } = require('./utils/customError');
 
 // create a web server application
 const PORT_NO = 7777;
@@ -15,14 +17,8 @@ const app = express();
 // wildcard-error handling matches all routes and throw any unhandled error.
 // we have written in the last because order matters in routing
 app.use(express.json());
-app.post('/signup', async (req, res) => {
+app.post('/signup', validateSignUp, async (req, res) => {
   try {
-    if (!req.body) {
-      const error = new Error('User details is required');
-      error.statusCode = 400;
-      throw error;
-    }
-
     const userToSave = new User({
       ...req.body,
     });
@@ -30,7 +26,7 @@ app.post('/signup', async (req, res) => {
     await userToSave.save();
     res.send('User Added Successfully');
   } catch (error) {
-    res.status(error.statusCode || 500).send(`Error while signing up the user: ${error.message}`);
+    throw new CustomAPIError('signup', error.message, error.statusCode || 500);
   }
 });
 
@@ -38,15 +34,13 @@ app.get('/user/:emailId', async (req, res) => {
   try {
     const { emailId } = req.params || {};
     if (!emailId) {
-      const error = new Error('Email Id required');
-      error.statusCode = 400;
-      throw error;
+      throw new CustomAPIError('user-get', 'Email Id required', 500);
     }
 
     const userFound = await User.findOne({ emailId });
     res.send(userFound);
   } catch (error) {
-    res.status(error.statusCode || 500).send(`Error while get user by email: ${error.message}`);
+    throw new CustomAPIError('user-get', error.message, error.statusCode || 500);
   }
 });
 
@@ -55,7 +49,7 @@ app.get('/feeds', async (req, res) => {
     const users = await User.find({});
     res.send(users);
   } catch (error) {
-    res.status(error.statusCode || 500).send(`Error while get user by email: ${error.message}`);
+    throw new CustomAPIError('feeds', error.message, error.statusCode || 500);
   }
 });
 
@@ -64,21 +58,26 @@ app.patch('/user/:userId', async (req, res) => {
     const { userId } = req.params || {};
     const dataToUpdate = req.body || {};
     if (!userId) {
-      const error = new Error('User Id required');
-      error.statusCode = 400;
-      throw error;
+      throw new CustomAPIError('user-patch', 'User Id required', 400);
     }
 
     if (!dataToUpdate) {
-      const error = new Error('Bad Request. Request Body is Empty');
-      error.statusCode = 400;
-      throw error;
+      throw new CustomAPIError('user-patch', 'Bad Request. Request Body is Empty', 400);
     }
 
     const users = await User.findByIdAndUpdate(userId, dataToUpdate, { runValidators: true });
     res.send(users);
   } catch (error) {
-    res.status(error.statusCode || 500).send(`Error while updating the user: ${error.message}`);
+    throw new CustomAPIError('user-patch', error.message, error.statusCode || 500);
+  }
+});
+
+app.use((err, req, res, next) => {
+  const { statusCode: status, message, data } = err;
+  if (err instanceof CustomAPIError) {
+    res.status(status).json({ status, message, data });
+  } else {
+    console.log(err);
   }
 });
 
