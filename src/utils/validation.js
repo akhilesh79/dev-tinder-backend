@@ -9,9 +9,9 @@ const signupSchema = Joi.object({
   password: Joi.string().required(),
   age: Joi.number().min(18),
   profileImage: Joi.string(),
-  about: Joi.string(),
+  about: Joi.string().optional(),
   skills: Joi.array().optional(),
-  gender: Joi.string(),
+  gender: Joi.string().optional(),
 });
 
 const validateSignUp = (req, res, next) => {
@@ -26,6 +26,7 @@ const validateSignUp = (req, res, next) => {
     if (!Validator.isStrongPassword(password)) {
       throw new CustomAPIError('validateSignUp', 'Given Password is not strong', 400);
     }
+
     const { error } = signupSchema.validate(signupRequest);
     if (error) {
       res.status(400).send({ status: 400, message: error.details[0].message });
