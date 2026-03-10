@@ -3,6 +3,7 @@ const connectDB = require('./config/database');
 const User = require('./models/user');
 const { validateSignUp } = require('./utils/validation');
 const { CustomAPIError, errorHandler } = require('./utils/customError');
+const Bcrypt = require('bcrypt');
 
 // create a web server application
 const PORT_NO = 7777;
@@ -19,8 +20,18 @@ const app = express();
 app.use(express.json());
 app.post('/signup', validateSignUp, async (req, res) => {
   try {
+    const { firstName, lastName, password, emailId, age, gender, skills } = req.body;
+    // encrypting the password , for security purposes.
+    const passwordHash = await Bcrypt.hash(password, 10);
+
     const userToSave = new User({
-      ...req.body,
+      firstName,
+      lastName,
+      password: passwordHash,
+      emailId,
+      age,
+      gender,
+      skills,
     });
 
     await userToSave.save();
