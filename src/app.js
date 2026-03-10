@@ -59,6 +59,29 @@ app.get('/feeds', async (req, res) => {
   }
 });
 
+app.patch('/user/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params || {};
+    const dataToUpdate = req.body || {};
+    if (!userId) {
+      const error = new Error('User Id required');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    if (!dataToUpdate) {
+      const error = new Error('Bad Request. Request Body is Empty');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const users = await User.findByIdAndUpdate(userId, dataToUpdate, { runValidators: true });
+    res.send(users);
+  } catch (error) {
+    res.status(error.statusCode || 500).send(`Error while updating the user: ${error.message}`);
+  }
+});
+
 connectDB()
   .then(() => {
     console.log('Database connection established...');
