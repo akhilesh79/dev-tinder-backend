@@ -15,7 +15,7 @@ const app = express();
 // wildcard-error handling matches all routes and throw any unhandled error.
 // we have written in the last because order matters in routing
 app.use(express.json());
-app.post('/signup', async (req, res, next) => {
+app.post('/signup', async (req, res) => {
   try {
     if (!req.body) {
       const error = new Error('User details is required');
@@ -31,6 +31,31 @@ app.post('/signup', async (req, res, next) => {
     res.send('User Added Successfully');
   } catch (error) {
     res.status(error.statusCode || 500).send(`Error while signing up the user: ${error.message}`);
+  }
+});
+
+app.get('/user/:emailId', async (req, res) => {
+  try {
+    const { emailId } = req.params || {};
+    if (!emailId) {
+      const error = new Error('Email Id required');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const userFound = await User.findOne({ emailId });
+    res.send(userFound);
+  } catch (error) {
+    res.status(error.statusCode || 500).send(`Error while get user by email: ${error.message}`);
+  }
+});
+
+app.get('/feeds', async (req, res) => {
+  try {
+    const users = await User.find({});
+    res.send(users);
+  } catch (error) {
+    res.status(error.statusCode || 500).send(`Error while get user by email: ${error.message}`);
   }
 });
 
