@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const validator = require('validator');
 const { Schema } = mongoose;
 
 const userSchema = new Schema(
@@ -18,15 +19,30 @@ const userSchema = new Schema(
       required: true,
       lowercase: true,
       trim: true,
+      validate(value) {
+        if (!validator.isEmail(value)) {
+          throw new Error('EmailId is not valid');
+        }
+      },
     },
     profileImage: {
       type: String,
       default:
         'https://png.pngtree.com/png-clipart/20230927/original/pngtree-man-avatar-image-for-profile-png-image_13001882.png',
+      validate(value) {
+        if (!validator.isURL(value)) {
+          throw new Error(`Profle Image is not valid`);
+        }
+      },
     },
     password: {
       type: String,
       required: true,
+      validate(value) {
+        if (!validator.isStrongPassword(value)) {
+          throw new Error('Password entered is not strong');
+        }
+      },
     },
     age: {
       type: Number,
