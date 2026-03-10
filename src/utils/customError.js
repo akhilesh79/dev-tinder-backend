@@ -7,4 +7,13 @@ class CustomAPIError extends Error {
   }
 }
 
-module.exports = { CustomAPIError };
+const errorHandler = (err, req, res, next) => {
+  const { statusCode: status, message, data } = err;
+  if (err instanceof CustomAPIError) {
+    res.status(status).json({ status, message, data });
+  } else {
+    console.log(err);
+  }
+};
+
+module.exports = { CustomAPIError, errorHandler };
