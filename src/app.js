@@ -2,7 +2,7 @@ const express = require('express');
 const connectDB = require('./config/database');
 const User = require('./models/user');
 const { validateSignUp } = require('./utils/validation');
-const { CustomAPIError } = require('./utils/customError');
+const { CustomAPIError, errorHandler } = require('./utils/customError');
 
 // create a web server application
 const PORT_NO = 7777;
@@ -72,15 +72,7 @@ app.patch('/user/:userId', async (req, res) => {
   }
 });
 
-app.use((err, req, res, next) => {
-  const { statusCode: status, message, data } = err;
-  if (err instanceof CustomAPIError) {
-    res.status(status).json({ status, message, data });
-  } else {
-    console.log(err);
-  }
-});
-
+app.use(errorHandler);
 connectDB()
   .then(() => {
     console.log('Database connection established...');
