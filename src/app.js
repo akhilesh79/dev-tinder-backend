@@ -41,6 +41,26 @@ app.post('/signup', validateSignUp, async (req, res) => {
   }
 });
 
+app.post('/login', async (req, res) => {
+  try {
+    const { emailId, password } = req.body;
+    const userDetails = await User.findOne({ emailId }, { password: 1, _id: 0 }).lean();
+
+    if (!userDetails) {
+      throw new CustomAPIError('login', 'Invalid Credential', 400);
+    }
+
+    const isPasswordValid = await Bcrypt.compare(password, userDetails.password);
+    if (!isPasswordValid) {
+      throw new CustomAPIError('login', 'Invalid Credential', 400);
+    } else {
+      res.send('Login Successfull!!');
+    }
+  } catch (error) {
+    throw new CustomAPIError('login', error.message, error.statusCode || 500);
+  }
+});
+
 app.get('/user/:emailId', async (req, res) => {
   try {
     const { emailId } = req.params || {};
