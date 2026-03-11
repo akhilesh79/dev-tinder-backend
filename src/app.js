@@ -2,7 +2,6 @@ const express = require('express');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./utils/customError');
 const apiRoutes = require('./api/index');
-
 const cookieParser = require('cookie-parser');
 
 // create a web server application
