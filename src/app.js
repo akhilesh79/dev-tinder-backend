@@ -5,7 +5,8 @@ const { validateSignUp } = require('./utils/validation');
 const { CustomAPIError, errorHandler } = require('./utils/customError');
 const Bcrypt = require('bcrypt');
 const cookieParser = require('cookie-parser');
-const { generateToken, verifyToken } = require('./utils/jwt');
+const { generateToken } = require('./utils/jwt');
+const { userAuth } = require('./middlewares/auth');
 
 // create a web server application
 const PORT_NO = 7777;
@@ -58,77 +59,20 @@ app.post('/login', async (req, res) => {
       throw new CustomAPIError('login', 'Invalid Credential', 400);
     }
 
-    const token = generateToken({ _id: userDetails._id }, 'DEV@Tinder@123');
-    res.cookie('token', token);
+    const token = generateToken({ _id: userDetails._id }, 'DEV@Tinder@123', { expiresIn: '7d' });
+    res.cookie('token', token, { expires: new Date(Date.now() + 7 * 24 * 3600000) });
     res.send('User loggedIn successfully');
   } catch (error) {
     throw new CustomAPIError('login', error.message, error.statusCode || 500);
   }
 });
 
-app.get('/profile', async (req, res) => {
+app.get('/profile', userAuth, async (req, res) => {
   try {
-    const token = req.cookies.token;
-    if (!token) {
-      throw new CustomAPIError('profile', 'Invalid Token', 400);
-    }
-
-    const verifiedUser = verifyToken(token, 'DEV@Tinder@123');
-    if (!verifiedUser) {
-      throw new CustomAPIError('profile', 'Invalid User');
-    }
-
-    const { _id: userId } = verifiedUser;
-    const foundUser = await User.findById(userId);
-    if (!foundUser) {
-      throw new CustomAPIError('profile', 'User details not found', 400);
-    }
-
-    res.send(foundUser);
+    const user = req.user;
+    res.send(user);
   } catch (error) {
     throw new CustomAPIError('login', error.message, error.statusCode || 500);
-  }
-});
-
-app.get('/user/:emailId', async (req, res) => {
-  try {
-    const { emailId } = req.params || {};
-    if (!emailId) {
-      throw new CustomAPIError('user-get', 'Email Id required', 500);
-    }
-
-    const userFound = await User.findOne({ emailId });
-    res.send(userFound);
-  } catch (error) {
-    throw new CustomAPIError('user-get', error.message, error.statusCode || 500);
-  }
-});
-
-app.get('/feeds', async (req, res) => {
-  try {
-    const users = await User.find({});
-    res.send(users);
-  } catch (error) {
-    throw new CustomAPIError('feeds', error.message, error.statusCode || 500);
-  }
-});
-
-app.patch('/user/:userId', async (req, res) => {
-  try {
-    const { userId } = req.params || {};
-    const dataToUpdate = req.body || {};
-    if (!userId) {
-      throw new CustomAPIError('user-patch', 'User Id required', 400);
-    }
-
-    if (!dataToUpdate) {
-      throw new CustomAPIError('user-patch', 'Bad Request. Request Body is Empty', 400);
-    }
-
-    const users = await User.findByIdAndUpdate(userId, dataToUpdate, { runValidators: true });
-    res.send(users);
-  } catch (error) {
-    throw new CustomAPIError('user-patch', error.message, error.statusCode || 500);
   }
 });
 
