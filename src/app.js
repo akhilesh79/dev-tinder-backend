@@ -48,18 +48,18 @@ app.post('/signup', validateSignUp, async (req, res) => {
 app.post('/login', async (req, res) => {
   try {
     const { emailId, password } = req.body;
-    const userDetails = await User.findOne({ emailId }, { password: 1, _id: 1 }).lean();
+    const userDetails = await User.findOne({ emailId }, { password: 1, _id: 1 });
 
     if (!userDetails) {
       throw new CustomAPIError('login', 'Invalid Credential', 400);
     }
 
-    const isPasswordValid = await Bcrypt.compare(password, userDetails.password);
+    const isPasswordValid = await userDetails.validatePassword(password);
     if (!isPasswordValid) {
       throw new CustomAPIError('login', 'Invalid Credential', 400);
     }
 
-    const token = generateToken({ _id: userDetails._id }, 'DEV@Tinder@123', { expiresIn: '7d' });
+    const token = userDetails.getJWT();
     res.cookie('token', token, { expires: new Date(Date.now() + 7 * 24 * 3600000) });
     res.send('User loggedIn successfully');
   } catch (error) {
