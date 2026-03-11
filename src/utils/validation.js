@@ -42,6 +42,58 @@ const validateSignUp = (req, res, next) => {
   }
 };
 
+const profileEditSchema = Joi.object({
+  age: Joi.number().min(18),
+  profileImage: Joi.string(),
+  about: Joi.string().optional(),
+  skills: Joi.array().optional(),
+  gender: Joi.string().optional(),
+});
+
+const validateProfileEdit = (req, res, next) => {
+  const profileEditRequest = req.body;
+  try {
+    const { error } = profileEditSchema.validate(profileEditRequest);
+    if (error) {
+      res.status(400).send({ status: 400, message: error.details[0].message });
+    } else {
+      next();
+    }
+  } catch (error) {
+    throw new CustomAPIError(
+      'validateProfileEdit',
+      'Error while validating profile edit request: ' + error.message,
+      error.statusCode,
+    );
+  }
+};
+
+const profileEditPasswordSchema = Joi.object({
+  currentPassword: Joi.string().required(),
+  newPassword: Joi.string().required(),
+  confirmPassword: Joi.ref('newPassword'),
+});
+
+const validateEditPassword = (req, res, next) => {
+  const profileEditPasswordRequest = req.body;
+  try {
+    const { error } = profileEditPasswordSchema.validate(profileEditPasswordRequest);
+    if (error) {
+      res.status(400).send({ status: 400, message: error.details[0].message });
+    } else {
+      next();
+    }
+  } catch (error) {
+    throw new CustomAPIError(
+      'validateEditPassword',
+      'Error while validating profile password edit request: ' + error.message,
+      error.statusCode,
+    );
+  }
+};
+
 module.exports = {
   validateSignUp,
+  validateProfileEdit,
+  validateEditPassword,
 };
