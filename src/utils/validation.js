@@ -92,8 +92,39 @@ const validateEditPassword = (req, res, next) => {
   }
 };
 
+const sendConnectionRequestSchema = Joi.object({
+  fromUserId: Joi.string().required(),
+  toUserId: Joi.string().invalid(Joi.ref('fromUserId')).required(),
+  status: Joi.string().allow('ignored', 'interested'),
+});
+
+const validateSendConnectionRequest = (req, res, next) => {
+  const { toUserId, status } = req.params;
+  const { _id } = req.user;
+  const sendConnectionRequest = {
+    fromUserId: String(_id),
+    toUserId,
+    status,
+  };
+  try {
+    const { error } = sendConnectionRequestSchema.validate(sendConnectionRequest);
+    if (error) {
+      res.status(400).send({ status: 400, message: error.details[0].message });
+    } else {
+      next();
+    }
+  } catch (error) {
+    throw new CustomAPIError(
+      'validateSendConnectionRequest',
+      'Error while validating connection request: ' + error.message,
+      error.statusCode,
+    );
+  }
+};
+
 module.exports = {
   validateSignUp,
   validateProfileEdit,
   validateEditPassword,
+  validateSendConnectionRequest,
 };
