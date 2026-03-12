@@ -1,5 +1,5 @@
 const express = require('express');
-const { validateSendConnectionRequest } = require('../../utils/validation');
+const { validateSendConnectionRequest, validateReviewRequest } = require('../../utils/validation');
 const { CustomAPIError } = require('../../utils/customError');
 const User = require('../../models/user');
 const ConnectionRequest = require('../../models/connectionRequest');
@@ -46,4 +46,32 @@ router.post('/send/:status/:toUserId', validateSendConnectionRequest, async (req
     throw new CustomAPIError('send-request', error.message, error.statusCode || 500);
   }
 });
+
+router.post('/review/:status/:requestId', validateReviewRequest, async (req, res) => {
+  try {
+    const { status, requestId } = req.params;
+    const { _id: loggedInUserId } = req.user;
+
+    const connectionRequestExists = await ConnectionRequest.findOne({
+      _id: requestId,
+      toUserId: loggedInUserId,
+      status: 'interested',
+    });
+
+    if (!connectionRequestExists) {
+      throw new CustomAPIError('review-request', 'Connection request not exists', 400);
+    }
+
+    connectionRequestExists.status = status;
+    const response = await connectionRequestExists.save();
+
+    res.json({
+      message: `Connection request: ${status}`,
+      data: response,
+    });
+  } catch (error) {
+    throw new CustomAPIError('review-request', error.message, error.statusCode || 500);
+  }
+});
+
 module.exports = router;
