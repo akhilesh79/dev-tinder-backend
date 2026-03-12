@@ -22,5 +22,5 @@
 
 - PATCH /request/send/ignored/:userId
 - PATCH /request/send/interested/:userId
-- PATCH /request/send/accepted/:requestId
-- PATCH /request/send/rejected/:requestId
+- PATCH /request/review/accepted/:requestId
+- PATCH /request/review/rejected/:requestId

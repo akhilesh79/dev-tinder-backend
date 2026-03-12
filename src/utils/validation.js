@@ -122,9 +122,32 @@ const validateSendConnectionRequest = (req, res, next) => {
   }
 };
 
+const reviewConnectionRequestSchema = Joi.object({
+  status: Joi.string().allow('accepted', 'rejected'),
+});
+
+const validateReviewRequest = (req, res, next) => {
+  const { status } = req.params;
+  try {
+    const { error } = reviewConnectionRequestSchema.validate({ status });
+    if (error) {
+      res.status(400).send({ status: 400, message: error.details[0].message });
+    } else {
+      next();
+    }
+  } catch (error) {
+    throw new CustomAPIError(
+      'validateReviewRequest',
+      'Error while validating connection request: ' + error.message,
+      error.statusCode,
+    );
+  }
+};
+
 module.exports = {
   validateSignUp,
   validateProfileEdit,
   validateEditPassword,
   validateSendConnectionRequest,
+  validateReviewRequest,
 };
