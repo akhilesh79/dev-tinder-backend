@@ -6,7 +6,7 @@ const userAuth = async (req, res, next) => {
   try {
     const { token } = req.cookies;
     if (!token) {
-      throw new CustomAPIError('userAuth', 'Token is not valid', 400);
+      throw new CustomAPIError('userAuth', 'Token is not valid', 401);
     }
 
     const decodedObj = jwt.verify(token, 'DEV@Tinder@123');
