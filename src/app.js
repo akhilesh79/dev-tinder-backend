@@ -3,6 +3,7 @@ const connectDB = require('./config/database');
 const { errorHandler } = require('./utils/customError');
 const apiRoutes = require('./api/index');
 const cookieParser = require('cookie-parser');
+const cors = require('cors');
 
 // create a web server application
 const PORT_NO = 7777;
@@ -18,6 +19,12 @@ const app = express();
 // we have written in the last because order matters in routing
 app.use(express.json());
 app.use(cookieParser());
+app.use(
+  cors({
+    origin: ['http://localhost:5173', 'http://localhost:5174'],
+    credentials: true,
+  }),
+);
 
 app.use('/api', apiRoutes);
 

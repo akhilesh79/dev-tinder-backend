@@ -23,7 +23,7 @@ router.post('/signup', validateSignUp, async (req, res) => {
     });
 
     await userToSave.save();
-    res.send('User Added Successfully');
+    res.json({ message: 'User Added Successfully' });
   } catch (error) {
     throw new CustomAPIError('signup', error.message, error.statusCode || 500);
   }
@@ -32,7 +32,7 @@ router.post('/signup', validateSignUp, async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const { emailId, password } = req.body;
-    const userDetails = await User.findOne({ emailId }, { password: 1, _id: 1 });
+    const userDetails = await User.findOne({ emailId });
 
     if (!userDetails) {
       throw new CustomAPIError('login', 'Invalid Credential', 400);
@@ -45,7 +45,7 @@ router.post('/login', async (req, res) => {
 
     const token = userDetails.getJWT();
     res.cookie('token', token, { expires: new Date(Date.now() + 7 * 24 * 3600000) });
-    res.send('User loggedIn successfully');
+    res.json({ data: userDetails, message: 'User loggedIn successfully' });
   } catch (error) {
     throw new CustomAPIError('login', error.message, error.statusCode || 500);
   }
@@ -53,7 +53,7 @@ router.post('/login', async (req, res) => {
 
 router.post('/logout', async (req, res) => {
   res.cookie('token', null, { expires: new Date(Date.now()) });
-  res.send('Logged Out Successfully');
+  res.json({ message: 'Logged Out Successfully' });
 });
 
 module.exports = router;
