@@ -22,8 +22,11 @@ router.post('/signup', validateSignUp, async (req, res) => {
       skills,
     });
 
-    await userToSave.save();
-    res.json({ message: 'User Added Successfully' });
+    const savedUser = await userToSave.save();
+
+    const token = savedUser.getJWT();
+    res.cookie('token', token, { expires: new Date(Date.now() + 7 * 24 * 3600000) });
+    res.json({ data: savedUser, message: 'User Added Successfully' });
   } catch (error) {
     throw new CustomAPIError('signup', error.message, error.statusCode || 500);
   }
