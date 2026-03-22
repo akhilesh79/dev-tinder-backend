@@ -16,10 +16,6 @@ router.get('/requests/recieved', async (req, res) => {
         path: 'fromUserId',
         select: 'firstName lastName profileImage age gender about skills',
       },
-      {
-        path: 'toUserId',
-        select: 'firstName lastName profileImage age gender about skills',
-      },
     ]);
 
     res.json({
@@ -50,7 +46,7 @@ router.get('/connections', async (req, res) => {
     ]);
 
     const connectionsOfLoggedInuser = connectionsMade.map((connection) => {
-      if (String(connection.fromUserId._id) === loggedInUser._id) {
+      if (String(connection.fromUserId._id) === String(loggedInUser._id)) {
         return connection.toUserId;
       }
       return connection.fromUserId;
