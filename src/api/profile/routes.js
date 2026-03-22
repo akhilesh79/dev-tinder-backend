@@ -20,6 +20,7 @@ router.post('/edit', validateProfileEdit, async (req, res) => {
     Object.keys(req.body).every((field) => (loggedInUser[field] = req.body[field]));
     await loggedInUser.save();
     res.json({
+      data: loggedInUser,
       message: 'User Data Updated Successfully',
     });
   } catch (error) {

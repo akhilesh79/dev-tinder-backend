@@ -43,6 +43,8 @@ const validateSignUp = (req, res, next) => {
 };
 
 const profileEditSchema = Joi.object({
+  firstName: Joi.string().required(),
+  lastName: Joi.string().required(),
   age: Joi.number().min(18),
   profileImage: Joi.string(),
   about: Joi.string().optional(),
