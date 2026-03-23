@@ -27,7 +27,6 @@ app.use(
 );
 
 app.use('/api', apiRoutes);
-
 app.use(errorHandler);
 connectDB()
   .then(() => {
