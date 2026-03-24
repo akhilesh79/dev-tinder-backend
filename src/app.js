@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const connectDB = require('./config/database');
 const { errorHandler } = require('./utils/customError');
@@ -6,7 +7,7 @@ const cookieParser = require('cookie-parser');
 const cors = require('cors');
 
 // create a web server application
-const PORT_NO = 7777;
+const PORT_NO = process.env.PORT || 7777;
 const app = express();
 
 // request handlers this server will responds
