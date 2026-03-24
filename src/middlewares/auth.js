@@ -9,7 +9,7 @@ const userAuth = async (req, res, next) => {
       throw new CustomAPIError('userAuth', 'Token is not valid', 401);
     }
 
-    const decodedObj = jwt.verify(token, 'DEV@Tinder@123');
+    const decodedObj = jwt.verify(token, process.env.JWT_SECRET_ID);
     const { _id: userId } = decodedObj;
 
     const user = await User.findById(userId);

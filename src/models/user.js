@@ -71,7 +71,7 @@ const userSchema = new Schema(
 
 userSchema.methods.getJWT = function () {
   const user = this;
-  const token = generateToken({ _id: user._id }, 'DEV@Tinder@123', { expiresIn: '7d' });
+  const token = generateToken({ _id: user._id }, process.env.JWT_SECRET_ID, { expiresIn: '7d' });
   return token;
 };
 
