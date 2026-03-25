@@ -12,7 +12,7 @@ router.post('/razorpay/payments', async (req, res) => {
     const webhookBody = req.body;
     const webhookSignature = req.get('x-razorpay-signature');
 
-    const isValidSignature = validateWebhookSignature(webhookBody, webhookSignature, webhookSecret);
+    const isValidSignature = validateWebhookSignature(JSON.stringify(webhookBody), webhookSignature, webhookSecret);
     console.log('Webhook Signature Valid:', isValidSignature);
     if (!isValidSignature) {
       throw new CustomAPIError('webhook-razorpay', 'Invalid webhook signature', 400);
