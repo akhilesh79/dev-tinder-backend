@@ -13,6 +13,7 @@ router.post('/razorpay/payments', async (req, res) => {
     const webhookSignature = req.get('x-razorpay-signature');
 
     const isValidSignature = validateWebhookSignature(webhookBody, webhookSignature, webhookSecret);
+    console.log('Webhook Signature Valid:', isValidSignature);
     if (!isValidSignature) {
       throw new CustomAPIError('webhook-razorpay', 'Invalid webhook signature', 400);
     }
@@ -20,6 +21,7 @@ router.post('/razorpay/payments', async (req, res) => {
     const paymentData = webhookBody.payload?.payment?.entity;
     const event = webhookBody.event;
     if (paymentData) {
+      console.log('Received Razorpay webhook event:', event, 'with payment data:', paymentData);
       const { order_id, status } = paymentData;
       const paymentInfo = await Payments.findOne({ orderId: order_id });
       if (!paymentInfo) {
@@ -51,6 +53,7 @@ router.post('/razorpay/payments', async (req, res) => {
 
     res.status(200).json({ message: 'Webhook received successfully' });
   } catch (error) {
+    console.error('Error processing Razorpay webhook:', error);
     throw new CustomAPIError('webhook-razorpay', JSON.stringify(error), error.statusCode || 500);
   }
 });
