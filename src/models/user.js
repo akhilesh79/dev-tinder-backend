@@ -65,6 +65,17 @@ const userSchema = new Schema(
     skills: {
       type: [String],
     },
+    isPremiumUser: {
+      type: Boolean,
+      default: false,
+    },
+    validity: {
+      type: Date,
+      default: null,
+    },
+    mememberShipType: {
+      type: String,
+    },
   },
   { timestamps: true },
 );

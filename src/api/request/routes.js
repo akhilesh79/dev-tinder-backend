@@ -3,7 +3,7 @@ const { validateSendConnectionRequest, validateReviewRequest } = require('../../
 const { CustomAPIError } = require('../../utils/customError');
 const User = require('../../models/user');
 const ConnectionRequest = require('../../models/connectionRequest');
-const { sendEmail } = require('../../utils/emailHelper');
+// const { sendEmail } = require('../../utils/emailHelper');
 const { requestHtmlTemplate } = require('./helper');
 
 const router = express.Router(); // object which handles routes in our web server application, can we passed as middle in app.use(), or its own .use().
@@ -41,7 +41,7 @@ router.post('/send/:status/:toUserId', validateSendConnectionRequest, async (req
 
       const bodyHtml = requestHtmlTemplate(toUser, req.user);
 
-      await sendEmail(toUser?.emailId, [], 'New Connection Request', bodyHtml);
+      // await sendEmail(toUser?.emailId, [], 'New Connection Request', bodyHtml); // ses is not active
       res.json({
         message: 'Connection sent successfully!!',
         data: response,
