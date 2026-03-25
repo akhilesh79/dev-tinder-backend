@@ -14,6 +14,6 @@ router.use('/profile', userAuth, profileRoutes);
 router.use('/request', userAuth, connectionRequestRoutes);
 router.use('/user', userAuth, userRoutes);
 router.use('/payments', userAuth, paymentRoutes);
-router.use('/webhook', webhookRoutes);
+router.use('/webhooks', webhookRoutes);
 
 module.exports = router;
