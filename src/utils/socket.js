@@ -10,6 +10,18 @@ const createRoomHash = (userId1, userId2) => {
   return crypto.createHash('sha256').update(stringValue).digest('hex');
 };
 
+// Helper: count how many sockets from a specific user are in a room
+const getUsersInRoom = (io, roomHash) => {
+  const room = io.sockets.adapter.rooms.get(roomHash);
+  if (!room) return new Set();
+  const userIds = new Set();
+  for (const socketId of room) {
+    const s = io.sockets.sockets.get(socketId);
+    if (s?.user?._id) userIds.add(s.user._id);
+  }
+  return userIds;
+};
+
 const initSocket = (server) => {
   const io = socket(server, {
     cors: {
@@ -44,35 +56,51 @@ const initSocket = (server) => {
     }
   });
 
-  // this event is emitted by client when user opens chat window with another user
   io.on('connection', (socket) => {
+    // joinChat: create/find room, send chat history, mark unread as delivered
     socket.on('joinChat', async ({ sourceUser, targetUser }) => {
-      const chat = await Chat.findOne({ participants: { $all: [sourceUser.userId, targetUser.userId] } });
-      if (!chat) {
+      try {
         const roomHash = createRoomHash(sourceUser.userId, targetUser.userId);
-        await Chat.create({
-          roomHash,
-          participants: [sourceUser.userId, targetUser.userId],
-          messages: [],
-        });
+        let chat = await Chat.findOne({ participants: { $all: [sourceUser.userId, targetUser.userId] } });
 
-        console.log(`Created new chat room ${roomHash} for users ${sourceUser.name} and ${targetUser.name}`);
+        if (!chat) {
+          chat = await Chat.create({
+            roomHash,
+            participants: [sourceUser.userId, targetUser.userId],
+            messages: [],
+          });
+          console.log(`Created new chat room ${roomHash}`);
+        }
+
         socket.join(roomHash);
-      } else {
-        console.log(`Chat room ${chat.roomHash} already exists, joining existing room`);
+
+        // Mark all messages FROM the other user as 'delivered' (if still 'sent')
+        let hasUpdates = false;
         chat.messages.forEach((msg) => {
-          if (msg.sender.toString() === sourceUser.userId.toString()) {
+          if (msg.sender.toString() === targetUser.userId && msg.status === 'sent') {
+            msg.status = 'delivered';
+            hasUpdates = true;
           }
         });
-        socket.join(chat.roomHash);
+
+        if (hasUpdates) {
+          await chat.save();
+          // Notify the room so the sender sees updated statuses
+          io.to(roomHash).emit('messageStatusBulkUpdate', {
+            status: 'delivered',
+            updatedBy: sourceUser.userId,
+          });
+        }
+      } catch (err) {
+        console.error('Error in joinChat:', err.message);
       }
     });
 
+    // sendMessage: save to DB, determine initial status, broadcast
     socket.on('sendMessage', async ({ sourceUser, targetUser, text }) => {
       try {
         const roomHash = createRoomHash(sourceUser.userId, targetUser.userId);
 
-        // check if both are having connections
         const connectionExists = await ConnectionRequest.findOne({
           $or: [
             { fromUserId: sourceUser.userId, toUserId: targetUser.userId, status: 'accepted' },
@@ -81,39 +109,77 @@ const initSocket = (server) => {
         });
 
         if (!connectionExists) {
-          console.error('Users are not connected, cannot send message');
-          throw new Error('Users are not connected');
+          socket.emit('chatError', { message: 'Users are not connected' });
+          return;
         }
 
         const chat = await Chat.findOne({ participants: { $all: [sourceUser.userId, targetUser.userId] } });
 
         if (!chat || chat.roomHash !== roomHash) {
-          console.error('Chat room not found for users, cannot send message');
-          throw new Error('Chat room not found');
+          socket.emit('chatError', { message: 'Chat room not found' });
+          return;
         }
 
+        // Check if the target user is currently in the room
+        const usersInRoom = getUsersInRoom(io, roomHash);
+        const isTargetInRoom = usersInRoom.has(targetUser.userId);
+
+        const initialStatus = isTargetInRoom ? 'delivered' : 'sent';
         const sentMessageTime = new Date();
+
         chat.messages.push({
           text,
-          sender: sourceUser.name,
-          status: 'sent',
+          sender: sourceUser.userId,
+          status: initialStatus,
           time: sentMessageTime,
         });
         await chat.save();
 
+        const savedMsg = chat.messages[chat.messages.length - 1];
+
         io.to(roomHash).emit('receiveMessage', {
+          _id: savedMsg._id,
           text,
-          sender: sourceUser.name,
-          status: 'sent',
+          sender: sourceUser.userId,
+          status: initialStatus,
           time: sentMessageTime,
         });
       } catch (err) {
-        console.error('Error in sendMessage event:', err.message);
-        throw new Error('Error sending message');
+        console.error('Error in sendMessage:', err.message);
+        socket.emit('chatError', { message: 'Error sending message' });
       }
     });
 
-    socket.on('disconnect', () => {});
+    // markAsRead: when user views messages, mark other user's messages as 'read'
+    socket.on('markAsRead', async ({ sourceUser, targetUser }) => {
+      try {
+        const roomHash = createRoomHash(sourceUser.userId, targetUser.userId);
+        const chat = await Chat.findOne({ roomHash });
+        if (!chat) return;
+
+        let hasUpdates = false;
+        chat.messages.forEach((msg) => {
+          if (msg.sender.toString() === targetUser.userId && msg.status !== 'read') {
+            msg.status = 'read';
+            hasUpdates = true;
+          }
+        });
+
+        if (hasUpdates) {
+          await chat.save();
+          io.to(roomHash).emit('messageStatusBulkUpdate', {
+            status: 'read',
+            updatedBy: sourceUser.userId,
+          });
+        }
+      } catch (err) {
+        console.error('Error in markAsRead:', err.message);
+      }
+    });
+
+    socket.on('disconnect', () => {
+      console.log(`Socket disconnected: ${socket.user?._id}`);
+    });
   });
 };
 
