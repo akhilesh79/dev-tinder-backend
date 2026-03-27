@@ -5,6 +5,7 @@ const { errorHandler } = require('./utils/customError');
 const apiRoutes = require('./api/index');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
+const http = require('http');
 
 // create a web server application
 const PORT_NO = process.env.PORT || 7777;
@@ -29,11 +30,16 @@ app.use(
 
 app.use('/api', apiRoutes);
 app.use(errorHandler);
+
+const initSocket = require('./utils/socket');
+const server = http.createServer(app);
+initSocket(server);
+
 connectDB()
   .then(() => {
     console.log('Database connection established...');
     // listen this server on port no 7777
-    app.listen(PORT_NO, () => {
+    server.listen(PORT_NO, () => {
       console.log('Server is suceessfully listening on port ', PORT_NO);
     });
   })
