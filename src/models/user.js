@@ -76,6 +76,10 @@ const userSchema = new Schema(
     mememberShipType: {
       type: String,
     },
+    lastSeen: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );
