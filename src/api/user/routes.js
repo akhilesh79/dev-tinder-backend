@@ -4,6 +4,7 @@ const { CustomAPIError } = require('../../utils/customError');
 const ConnectionRequest = require('../../models/connectionRequest');
 const User = require('../../models/user');
 const Chat = require('../../models/chat');
+const { isUserOnline } = require('../../utils/presence');
 const router = express.Router();
 
 router.get('/requests/recieved', async (req, res) => {
@@ -39,11 +40,11 @@ router.get('/connections', async (req, res) => {
     }).populate([
       {
         path: 'fromUserId',
-        select: 'firstName lastName profileImage age gender about skills',
+        select: 'firstName lastName profileImage age gender about skills lastSeen',
       },
       {
         path: 'toUserId',
-        select: 'firstName lastName profileImage age gender about skills',
+        select: 'firstName lastName profileImage age gender about skills lastSeen',
       },
     ]);
 
@@ -54,9 +55,44 @@ router.get('/connections', async (req, res) => {
       return connection.fromUserId;
     });
 
+    const connectionIds = connectionsOfLoggedInuser.map((connection) => connection._id);
+    const chats = connectionIds.length
+      ? await Chat.find({
+          $and: [{ participants: loggedInUser._id }, { participants: { $in: connectionIds } }],
+        }).select('participants messages.sender messages.status')
+      : [];
+
+    const unreadCountsByUserId = new Map();
+
+    chats.forEach((chat) => {
+      const partnerId = chat.participants.find((participantId) => String(participantId) !== String(loggedInUser._id));
+
+      if (!partnerId) {
+        return;
+      }
+
+      const unreadCount = chat.messages.reduce((count, message) => {
+        const isFromPartner = String(message.sender) === String(partnerId);
+        const isUnread = message.status !== 'read';
+        return isFromPartner && isUnread ? count + 1 : count;
+      }, 0);
+
+      unreadCountsByUserId.set(String(partnerId), unreadCount);
+    });
+
+    const enrichedConnections = connectionsOfLoggedInuser.map((connection) => {
+      const plainConnection = connection.toObject();
+
+      return {
+        ...plainConnection,
+        isOnline: isUserOnline(connection._id),
+        unreadCount: unreadCountsByUserId.get(String(connection._id)) || 0,
+      };
+    });
+
     res.json({
       message: 'Data fetched successfully',
-      data: connectionsOfLoggedInuser,
+      data: enrichedConnections,
     });
   } catch (error) {
     throw new CustomAPIError('requests-recieved', error.message, error.statusCode || 500);

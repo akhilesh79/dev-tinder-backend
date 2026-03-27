@@ -4,10 +4,20 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const ConnectionRequest = require('../models/connectionRequest');
 const Chat = require('../models/chat');
+const User = require('../models/user');
+const { addUserSocket, getUserRoom, removeUserSocket } = require('./presence');
 
 const createRoomHash = (userId1, userId2) => {
   const stringValue = [userId1, userId2].sort().join('_');
   return crypto.createHash('sha256').update(stringValue).digest('hex');
+};
+
+const getUnreadCount = (chat, senderUserId) => {
+  return chat.messages.reduce((count, message) => {
+    const isFromSender = message.sender.toString() === senderUserId.toString();
+    const isUnread = message.status !== 'read';
+    return isFromSender && isUnread ? count + 1 : count;
+  }, 0);
 };
 
 // Helper: count how many sockets from a specific user are in a room
@@ -57,6 +67,19 @@ const initSocket = (server) => {
   });
 
   io.on('connection', (socket) => {
+    const currentUserId = socket.user._id.toString();
+
+    socket.join(getUserRoom(currentUserId));
+
+    const becameOnline = addUserSocket(currentUserId, socket.id);
+    if (becameOnline) {
+      io.emit('presence:update', {
+        userId: currentUserId,
+        isOnline: true,
+        lastSeen: null,
+      });
+    }
+
     // joinChat: create/find room, send chat history, mark unread as delivered
     socket.on('joinChat', async ({ sourceUser, targetUser }) => {
       try {
@@ -94,6 +117,11 @@ const initSocket = (server) => {
       } catch (err) {
         console.error('Error in joinChat:', err.message);
       }
+    });
+
+    socket.on('leaveChat', ({ sourceUser, targetUser }) => {
+      const roomHash = createRoomHash(sourceUser.userId, targetUser.userId);
+      socket.leave(roomHash);
     });
 
     // sendMessage: save to DB, determine initial status, broadcast
@@ -136,6 +164,7 @@ const initSocket = (server) => {
         await chat.save();
 
         const savedMsg = chat.messages[chat.messages.length - 1];
+        const unreadCount = getUnreadCount(chat, sourceUser.userId);
 
         io.to(roomHash).emit('receiveMessage', {
           _id: savedMsg._id,
@@ -143,6 +172,11 @@ const initSocket = (server) => {
           sender: sourceUser.userId,
           status: initialStatus,
           time: sentMessageTime,
+        });
+
+        io.to(getUserRoom(targetUser.userId)).emit('connection:unread-update', {
+          userId: sourceUser.userId,
+          unreadCount,
         });
       } catch (err) {
         console.error('Error in sendMessage:', err.message);
@@ -171,14 +205,35 @@ const initSocket = (server) => {
             status: 'read',
             updatedBy: sourceUser.userId,
           });
+
+          io.to(getUserRoom(sourceUser.userId)).emit('connection:unread-update', {
+            userId: targetUser.userId,
+            unreadCount: 0,
+          });
         }
       } catch (err) {
         console.error('Error in markAsRead:', err.message);
       }
     });
 
-    socket.on('disconnect', () => {
-      console.log(`Socket disconnected: ${socket.user?._id}`);
+    socket.on('disconnect', async () => {
+      try {
+        const wentOffline = removeUserSocket(currentUserId, socket.id);
+
+        if (wentOffline) {
+          const lastSeen = new Date();
+          await User.findByIdAndUpdate(currentUserId, { lastSeen });
+          io.emit('presence:update', {
+            userId: currentUserId,
+            isOnline: false,
+            lastSeen,
+          });
+        }
+
+        console.log(`Socket disconnected: ${currentUserId}`);
+      } catch (err) {
+        console.error('Error in disconnect:', err.message);
+      }
     });
   });
 };
