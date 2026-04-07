@@ -46,7 +46,6 @@ const profileEditSchema = Joi.object({
   firstName: Joi.string().required(),
   lastName: Joi.string().required(),
   age: Joi.number().min(18),
-  profileImage: Joi.string(),
   about: Joi.string().optional(),
   skills: Joi.array().optional(),
   gender: Joi.string().optional(),
@@ -55,7 +54,14 @@ const profileEditSchema = Joi.object({
 const validateProfileEdit = (req, res, next) => {
   const profileEditRequest = req.body;
   try {
-    const { error } = profileEditSchema.validate(profileEditRequest);
+    const { error } = profileEditSchema.validate({
+      firstName: profileEditRequest.firstName,
+      lastName: profileEditRequest.lastName,
+      age: profileEditRequest.age,
+      about: profileEditRequest.about,
+      skills: JSON.parse(profileEditRequest.skills),
+      gender: profileEditRequest.gender,
+    });
     if (error) {
       res.status(400).send({ status: 400, message: error.details[0].message });
     } else {

@@ -2,6 +2,25 @@ const express = require('express');
 const { CustomAPIError } = require('../../utils/customError');
 const bcrypt = require('bcrypt');
 const { validateProfileEdit, validateEditPassword } = require('../../utils/validation');
+const multer = require('multer');
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, 'uploads/profile-images/');
+    },
+    filename: (req, file, cb) => {
+      cb(null, file.originalname);
+    },
+  }),
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new CustomAPIError('profile-edit', 'Only image files are allowed for profile picture', 400), false);
+    }
+  },
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 const router = express.Router();
 
@@ -14,9 +33,13 @@ router.get('/view', async (req, res) => {
   }
 });
 
-router.post('/edit', validateProfileEdit, async (req, res) => {
+router.post('/edit', upload.single('profileImage'), validateProfileEdit, async (req, res) => {
   try {
     const loggedInUser = req.user;
+    const { file } = req;
+    if (file) {
+      loggedInUser.profileImage = `uploads/profile-images/${file.filename}`;
+    }
     Object.keys(req.body).every((field) => (loggedInUser[field] = req.body[field]));
     await loggedInUser.save();
     res.json({

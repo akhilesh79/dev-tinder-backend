@@ -6,6 +6,7 @@ const apiRoutes = require('./api/index');
 const cookieParser = require('cookie-parser');
 const cors = require('cors');
 const http = require('http');
+const path = require('path');
 
 // create a web server application
 const PORT_NO = process.env.PORT || 7777;
@@ -20,6 +21,8 @@ const app = express();
 // wildcard-error handling matches all routes and throw any unhandled error.
 // we have written in the last because order matters in routing
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(
   cors({
