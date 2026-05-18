@@ -12,7 +12,7 @@ const errorHandler = (err, req, res, next) => {
   if (err instanceof CustomAPIError) {
     res.status(status).json({ status, message, data });
   } else {
-    console.log(err);
+    res.status(status).json(err);
   }
 };
 
